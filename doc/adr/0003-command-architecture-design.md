@@ -8,56 +8,82 @@ Accepted
 
 ## Context
 
-Watson Dashboard needs a command architecture that supports multiple commands with consistent interfaces, automatic help generation, and easy extensibility. The application will support commands like `help`, `worktime:weekly`, `worktime:today`, and future commands.
+Watson Dashboard needs a command architecture that supports multiple commands with consistent interfaces, automatic help generation, and easy extensibility. The application will support commands like `worktime`, `status`, `report`, and future commands.
 
 Key requirements:
 - Type-safe command definitions with compile-time validation
 - Consistent command interface across all commands
-- Automatic help generation and command discovery
-- Support for command-specific arguments and options
+- Integration with clap for argument parsing and help generation
+- Support for command-specific arguments and options defined with clap derive
 - Easy testing and mocking of individual commands
-- Extensible architecture for adding new commands
+- Minimal boilerplate for adding new commands
+- Static dispatch for optimal performance
 
 ## Decision
 
-We will use a **trait-based command architecture** with compile-time command registration.
+We will use a **enum_dispatch-based command architecture** that combines clap's derive API with static dispatch for optimal performance and minimal boilerplate.
 
 **Command Trait:**
 ```rust
 pub trait Command {
-    fn name(&self) -> &'static str;
-    fn description(&self) -> &'static str;
-    fn run(&self, args: &CommandArgs) -> anyhow::Result<()>;
+    fn run(&self) -> anyhow::Result<()>;
 }
 ```
 
-**Command Registration:**
-- Commands are registered at compile time using a registry pattern
-- Each command implements the `Command` trait
-- Commands are discovered automatically through static registration
-- Help system iterates through registered commands
+**Command Architecture:**
+- Commands are defined as clap derive structs with their own argument parsing
+- Each command implements the `Command` trait with a `run()` method
+- Commands are registered in a single enum using `enum_dispatch` for automatic dispatch
+- Clap handles argument parsing, help generation, and validation automatically
+- Static dispatch eliminates runtime overhead while reducing boilerplate
+
+**Integration Pattern:**
+```rust
+#[derive(Parser)]
+#[enum_dispatch(Command)]
+enum Commands {
+    Worktime(WorktimeCommand),
+    Status(StatusCommand),
+}
+
+#[derive(Parser)]
+struct WorktimeCommand {
+    #[arg(short, long)]
+    weeks: u32,
+}
+
+impl Command for WorktimeCommand {
+    fn run(&self) -> anyhow::Result<()> {
+        // Implementation using self.weeks
+    }
+}
+```
 
 **Alternative approaches considered:**
-- **Macro-based**: Complex to implement and debug
+- **Pure enum with manual match**: Requires touching multiple places for each new command
+- **Inventory-based dynamic dispatch**: Runtime overhead and non-standard clap integration
+- **Macro-generated registration**: Complex to implement and debug
 - **Dynamic loading**: Runtime overhead and less type safety
-- **Clap subcommands**: Less flexible for complex command hierarchies
 
 ## Consequences
 
 **Positive:**
-- **Type Safety**: Commands are validated at compile time
-- **Consistent Interface**: All commands follow the same pattern
-- **Easy Testing**: Commands can be tested in isolation
-- **Automatic Discovery**: Help system and command listing work automatically
-- **Performance**: No runtime overhead for command lookup
+- **Type Safety**: Commands are validated at compile time with full clap derive support
+- **Minimal Boilerplate**: Adding commands requires only enum registration and trait implementation
+- **Standard Clap Integration**: Full support for clap derive, help generation, and argument validation
+- **Static Dispatch**: Zero runtime overhead via enum_dispatch
+- **Easy Testing**: Commands can be tested in isolation with their parsed arguments
+- **Automatic Help**: Clap automatically generates help for each command and its arguments
+- **Performance**: Optimal performance with compile-time dispatch
 - **Maintainability**: Clear separation of concerns between commands
 
 **Negative:**
-- **Boilerplate**: Each command requires trait implementation
+- **Enum Registration**: New commands must be added to the Commands enum
 - **Compile-time Registration**: Commands must be registered at compile time
 - **Static Linking**: Cannot load commands dynamically at runtime
+- **Dependency**: Requires enum_dispatch crate
 
 **Risks:**
-- **Command Conflicts**: Risk of name collisions between commands
-- **Registration Complexity**: Manual registration process could be error-prone
+- **Command Conflicts**: Risk of name collisions between commands (mitigated by clap validation)
+- **Forgotten Registration**: Risk of implementing command but forgetting to add to enum
 - **Extensibility**: Third-party commands would require recompilation
