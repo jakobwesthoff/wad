@@ -8,7 +8,10 @@ pub struct WorktimeTodayCommand {
 }
 
 impl Command for WorktimeTodayCommand {
-    fn run(&self) -> Result<()> {
+    fn run(&self, verbose: bool) -> Result<()> {
+        if verbose {
+            println!("Running worktime:today command in verbose mode");
+        }
         println!("Today's work time: [placeholder]");
         Ok(())
     }

@@ -7,7 +7,7 @@ pub use worktime::WorktimeTodayCommand;
 
 #[enum_dispatch]
 pub trait Command {
-    fn run(&self) -> Result<()>;
+    fn run(&self, verbose: bool) -> Result<()>;
 }
 
 #[derive(Parser)]
