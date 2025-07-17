@@ -36,3 +36,33 @@ pub fn header_text(text: &str) -> String {
 pub fn verbose_text(text: &str) -> String {
     text.fg::<VerboseColor>().to_string()
 }
+
+/// Trait for formatting durations in a human-readable way
+pub trait DurationFormat {
+    fn to_string_hhmm(&self) -> String;
+    fn to_string_long_hhmm(&self) -> String;
+}
+
+impl DurationFormat for chrono::Duration {
+    fn to_string_hhmm(&self) -> String {
+        format!("{:02}:{:02}", self.num_hours(), self.num_minutes() % 60)
+    }
+
+    fn to_string_long_hhmm(&self) -> String {
+        let hours = self.num_hours();
+        let minutes = self.num_minutes() % 60;
+
+        match (hours, minutes) {
+            (0, 0) => "0 minutes".to_string(),
+            (0, m) => format!("{} minute{}", m, if m == 1 { "" } else { "s" }),
+            (h, 0) => format!("{} hour{}", h, if h == 1 { "" } else { "s" }),
+            (h, m) => format!(
+                "{} hour{} and {} minute{}",
+                h,
+                if h == 1 { "" } else { "s" },
+                m,
+                if m == 1 { "" } else { "s" }
+            ),
+        }
+    }
+}

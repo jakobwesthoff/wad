@@ -58,7 +58,7 @@ fn main() -> Result<()> {
     }
 
     match cli.command {
-        Some(command) => command.run(cli.verbose),
+        Some(command) => command.run(&watson_client, cli.verbose),
         None => {
             println!(
                 "{}",

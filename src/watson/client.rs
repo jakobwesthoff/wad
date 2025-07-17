@@ -1,4 +1,6 @@
 use super::error::WatsonError;
+use super::frame::{Frame, Frames};
+use super::query::LogQuery;
 use std::process::Command;
 use which::which;
 
@@ -90,5 +92,27 @@ impl WatsonClient {
         let path = which("watson").map_err(|_| WatsonError::CommandNotFound)?;
 
         Ok(path.to_string_lossy().to_string())
+    }
+
+    /// Execute Watson log command and return parsed frames
+    pub fn log(&self, query: LogQuery) -> Result<Frames, WatsonError> {
+        let args = query.to_args();
+
+        let output = Command::new("watson")
+            .args(&args)
+            .output()
+            .map_err(|_| WatsonError::CommandNotFound)?;
+
+        if !output.status.success() {
+            return Err(WatsonError::CommandFailed(
+                String::from_utf8_lossy(&output.stderr).to_string(),
+            ));
+        }
+
+        let json_output = String::from_utf8_lossy(&output.stdout);
+        let frames: Vec<Frame> = serde_json::from_str(&json_output)
+            .map_err(|e| WatsonError::JsonParseError(e.to_string()))?;
+
+        Ok(Frames::from(frames))
     }
 }

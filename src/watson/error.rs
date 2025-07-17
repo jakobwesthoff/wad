@@ -10,4 +10,7 @@ pub enum WatsonError {
 
     #[error("Failed to parse Watson version: {0}")]
     VersionParseError(String),
+
+    #[error("Failed to parse Watson JSON output: {0}")]
+    JsonParseError(String),
 }
