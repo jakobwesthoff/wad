@@ -7,5 +7,6 @@ edition = "2024"
 anyhow = "1.0.98"
 clap = { version = "4.5.41", features = ["derive"] }
 enum_dispatch = "0.3.13"
+owo-colors = "4.2.2"
 thiserror = "2.0.12"
 which = "8.0.0"

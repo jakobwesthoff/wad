@@ -1,4 +1,5 @@
 use super::Command;
+use crate::utils::formatting;
 use anyhow::Result;
 use clap::Parser;
 
@@ -10,9 +11,16 @@ pub struct WorktimeTodayCommand {
 impl Command for WorktimeTodayCommand {
     fn run(&self, verbose: bool) -> Result<()> {
         if verbose {
-            println!("Running worktime:today command in verbose mode");
+            println!(
+                "{}",
+                formatting::verbose_text("Running worktime:today command in verbose mode")
+            );
         }
-        println!("Today's work time: [placeholder]");
+        println!(
+            "{}: {}",
+            formatting::header_text("Today's work time"),
+            formatting::info_text("[placeholder]")
+        );
         Ok(())
     }
 }
