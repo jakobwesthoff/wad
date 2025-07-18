@@ -1,5 +1,7 @@
 use chrono::NaiveDate;
 
+use crate::utils::date::Week;
+
 /// Parameters for Watson log command
 #[derive(Debug, Clone)]
 pub struct LogQuery {
@@ -22,6 +24,11 @@ impl LogQuery {
     pub fn today() -> Self {
         let today = chrono::Utc::now().date_naive();
         Self::new(today, today)
+    }
+
+    /// Create a log query for the given Week
+    pub fn week(week: &Week) -> Self {
+        Self::new(week.start, week.end)
     }
 
     /// Include current/active frames in the query
