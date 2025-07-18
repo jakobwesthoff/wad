@@ -9,8 +9,10 @@ use anyhow::Result;
 use chrono::{Datelike, Duration, Weekday};
 use clap::Parser;
 use owo_colors::{OwoColorize, colors::*};
-use tabled::settings::{Alignment, Style};
-use tabled::{Table, Tabled};
+use tabled::Table;
+use tabled::builder::Builder;
+use tabled::settings::themes::BorderCorrection;
+use tabled::settings::{Alignment, Span, Style};
 
 // Worktime-specific color aliases
 type NoWorkColor = Red;
@@ -18,54 +20,39 @@ type LowWorkColor = Yellow;
 type MediumWorkColor = Cyan;
 type HighWorkColor = Green;
 
-#[derive(Tabled)]
-struct WeeklyTableRow {
-    #[tabled(rename = "Mon")]
-    mon: String,
-    #[tabled(rename = "Tue")]
-    tue: String,
-    #[tabled(rename = "Wed")]
-    wed: String,
-    #[tabled(rename = "Thu")]
-    thu: String,
-    #[tabled(rename = "Fri")]
-    fri: String,
-    #[tabled(rename = "Sat")]
-    sat: String,
-    #[tabled(rename = "Sun")]
-    sun: String,
-    #[tabled(rename = "Total")]
-    total: String,
-}
+pub struct WeeklyTableBuilder;
 
-pub struct WeeklyTableRenderer;
+impl WeeklyTableBuilder {
+    pub fn build(week_frames: &[(&Week, Frames)]) -> Table {
+        let mut b = Builder::new();
+        // Headers
+        b.push_record(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Total"]);
 
-impl WeeklyTableRenderer {
-    pub fn render_weeks(week_frames: &[(&Week, Frames)]) -> String {
-        let mut result = String::new();
-
-        for (i, (week, frames)) in week_frames.iter().enumerate() {
-            if i > 0 {
-                result.push('\n');
-            }
-
+        for (week, frames) in week_frames.iter() {
             // Week header
-            result.push_str(&format!("{}\n", week.to_string_long()));
+            b.push_record([&week.to_string_long()]);
 
-            // Create table for this week
-            let data_row = Self::create_week_row(week, frames);
-            let table_data = vec![data_row];
-
-            let mut table = Table::new(&table_data);
-            table.with(Style::rounded()).with(Alignment::center());
-
-            result.push_str(&table.to_string());
+            // Create row for this week
+            b.push_record(Self::create_week_row(week, frames));
         }
 
-        result
+        let mut table = b.build();
+        table
+            .with(Style::modern_rounded())
+            .with(Alignment::center());
+
+        // Set the span for the weekday headers.
+        for row_id in 0..table.count_rows() {
+            if row_id % 2 == 1 {
+                table.modify((row_id, 0), Span::column(0));
+            }
+        }
+        table.with(BorderCorrection::span());
+
+        table
     }
 
-    fn create_week_row(week: &Week, frames: &Frames) -> WeeklyTableRow {
+    fn create_week_row(week: &Week, frames: &Frames) -> Vec<String> {
         let frames_by_date = frames.by_date();
         let mut daily_durations = std::collections::HashMap::new();
         let total_duration = frames.total_duration();
@@ -83,16 +70,16 @@ impl WeeklyTableRenderer {
             daily_durations.insert(weekday, duration);
         }
 
-        WeeklyTableRow {
-            mon: Self::format_duration_with_color(daily_durations[&Weekday::Mon], true),
-            tue: Self::format_duration_with_color(daily_durations[&Weekday::Tue], true),
-            wed: Self::format_duration_with_color(daily_durations[&Weekday::Wed], true),
-            thu: Self::format_duration_with_color(daily_durations[&Weekday::Thu], true),
-            fri: Self::format_duration_with_color(daily_durations[&Weekday::Fri], true),
-            sat: Self::format_duration_with_color(daily_durations[&Weekday::Sat], true),
-            sun: Self::format_duration_with_color(daily_durations[&Weekday::Sun], true),
-            total: Self::format_duration_with_color(total_duration, false),
-        }
+        vec![
+            Self::format_duration_with_color(daily_durations[&Weekday::Mon], true),
+            Self::format_duration_with_color(daily_durations[&Weekday::Tue], true),
+            Self::format_duration_with_color(daily_durations[&Weekday::Wed], true),
+            Self::format_duration_with_color(daily_durations[&Weekday::Thu], true),
+            Self::format_duration_with_color(daily_durations[&Weekday::Fri], true),
+            Self::format_duration_with_color(daily_durations[&Weekday::Sat], true),
+            Self::format_duration_with_color(daily_durations[&Weekday::Sun], true),
+            Self::format_duration_with_color(total_duration, false),
+        ]
     }
 
     fn format_duration_with_color(duration: Duration, is_daily: bool) -> String {
@@ -150,7 +137,7 @@ impl Command for WorktimeWeeklyCommand {
             week_frames
         };
 
-        let table = WeeklyTableRenderer::render_weeks(&week_frames);
+        let table = WeeklyTableBuilder::build(&week_frames);
         println!("{}", table);
 
         Ok(())
