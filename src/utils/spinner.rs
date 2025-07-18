@@ -14,8 +14,8 @@ pub struct SpinnerConfig {
 impl Default for SpinnerConfig {
     fn default() -> Self {
         Self {
-            message: "Loading...".to_string(),
-            debounce_ms: 200,
+            message: "Collecting Data...".to_string(),
+            debounce_ms: 300,
             spinner_type: Spinners::Dots,
         }
     }

@@ -1,6 +1,7 @@
 use super::Command;
 use crate::utils::date::Week;
 use crate::utils::formatting::{self, DurationFormat, WeekFormat};
+use crate::utils::spinner::{SpinnerConfig, SpinnerGuard};
 use crate::watson::{LogQuery, WatsonClient};
 use anyhow::Result;
 use clap::Parser;
@@ -19,12 +20,6 @@ pub struct WorktimeTodayCommand {
     projects: bool,
 }
 
-impl WorktimeTodayCommand {
-    pub fn new() -> Self {
-        Self { projects: false }
-    }
-}
-
 impl Command for WorktimeTodayCommand {
     fn run(&self, watson_client: &WatsonClient, verbose: bool) -> Result<()> {
         if verbose {
@@ -34,8 +29,11 @@ impl Command for WorktimeTodayCommand {
             );
         }
 
-        let query = LogQuery::today().with_current();
-        let frames = watson_client.log(query)?;
+        let frames = {
+            let _ = SpinnerGuard::new(SpinnerConfig::default());
+            let query = LogQuery::today().with_current();
+            watson_client.log(query)?
+        };
 
         // Show project breakdown if requested
         if self.projects {
@@ -80,12 +78,6 @@ pub struct WorktimeWeeklyCommand {
     weeks: u32,
 }
 
-impl WorktimeWeeklyCommand {
-    pub fn new() -> Self {
-        Self { weeks: 4 }
-    }
-}
-
 impl Command for WorktimeWeeklyCommand {
     fn run(&self, watson_client: &WatsonClient, verbose: bool) -> Result<()> {
         if verbose {
@@ -98,10 +90,19 @@ impl Command for WorktimeWeeklyCommand {
         // Get the last N weeks
         let weeks = Week::last_n_weeks(self.weeks);
 
-        for week in &weeks {
-            let query = LogQuery::week(week);
-            let frames = watson_client.log(query)?;
+        let week_frames = {
+            let _ = SpinnerGuard::new(SpinnerConfig::default());
+            let mut week_frames = vec![];
 
+            for week in &weeks {
+                let query = LogQuery::week(week);
+                let frames = watson_client.log(query)?;
+                week_frames.push((week, frames));
+            }
+            week_frames
+        };
+
+        for (week, frames) in &week_frames {
             let total_duration = frames.total_duration();
             let hours = total_duration.num_hours();
             let short_duration = total_duration.to_string_hhmm();
