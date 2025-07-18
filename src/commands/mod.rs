@@ -5,7 +5,7 @@ use enum_dispatch::enum_dispatch;
 
 pub mod discovery;
 pub mod worktime;
-pub use worktime::WorktimeTodayCommand;
+pub use worktime::{WorktimeTodayCommand, WorktimeWeeklyCommand};
 
 #[enum_dispatch]
 pub trait Command {
@@ -18,4 +18,7 @@ pub enum Commands {
     /// Show today's work time
     #[command(name = "worktime:today")]
     WorktimeToday(WorktimeTodayCommand),
+    /// Show weekly work time overview
+    #[command(name = "worktime:weekly")]
+    WorktimeWeekly(WorktimeWeeklyCommand),
 }
