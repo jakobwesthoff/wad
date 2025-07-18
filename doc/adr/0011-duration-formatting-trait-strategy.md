@@ -6,6 +6,8 @@ Date: 2025-07-17
 
 Accepted
 
+Superseded by [13. Formatting traits centralization strategy](0013-formatting-traits-centralization-strategy.md)
+
 ## Context
 
 Watson Dashboard needs multiple duration formats across the application: eg. short format (hh:mm) and long format (X hours and Y minutes). We need a consistent, reusable approach.
@@ -18,6 +20,7 @@ We will implement a **`DurationFormat` trait** with standard formatting methods 
 - `to_string_long_hhmm()` - returns "8 hours and 5 minutes" format
 - The trait will be added to as needed
 - Implement trait for `chrono::Duration` type
+
 
 ## Consequences
 

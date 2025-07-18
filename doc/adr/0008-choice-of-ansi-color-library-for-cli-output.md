@@ -25,6 +25,10 @@ We will use **owo-colors** for ANSI colored CLI output.
 - no_std compatible and actively maintained
 - Drop-in replacement for colored if needed
 
+## Links
+
+- Links to [ADR 0013](0013-formatting-traits-centralization-strategy.md) (Formatting traits centralization strategy)
+
 ## Consequences
 
 **Positive:**
