@@ -1,4 +1,4 @@
-use chrono::{Datelike, Duration, Local, NaiveDate};
+use chrono::{Datelike, Duration, Local, NaiveDate, Weekday};
 
 /// Represents a week with Monday as the first day and Sunday as the last day
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,6 +42,19 @@ impl Week {
             .map(|i| Self::offset(i as i32))
             .rev() // Reverse to get oldest to newest
             .collect()
+    }
+
+    /// Get ordered weekdays for table display (Mon-Sun)
+    pub fn weekday_order() -> [Weekday; 7] {
+        [
+            Weekday::Mon,
+            Weekday::Tue,
+            Weekday::Wed,
+            Weekday::Thu,
+            Weekday::Fri,
+            Weekday::Sat,
+            Weekday::Sun,
+        ]
     }
 }
 

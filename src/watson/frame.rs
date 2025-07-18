@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -82,6 +82,20 @@ impl Frames {
     /// Check if any frame is currently active
     pub fn has_active_frames(&self) -> bool {
         self.frames.iter().any(|frame| frame.is_active())
+    }
+
+    /// Group frames by date (ignoring time)
+    pub fn by_date(&self) -> HashMap<NaiveDate, Frames> {
+        let mut grouped: HashMap<NaiveDate, Vec<Frame>> = HashMap::new();
+        for frame in &self.frames {
+            let date = frame.start.date_naive();
+            grouped.entry(date).or_default().push(frame.clone());
+        }
+
+        grouped
+            .into_iter()
+            .map(|(date, frames)| (date, Frames::from(frames)))
+            .collect()
     }
 }
 

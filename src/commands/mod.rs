@@ -1,11 +1,13 @@
-use crate::watson::WatsonClient;
+use crate::{
+    commands::worktime::{WorktimeTodayCommand, WorktimeWeeklyCommand},
+    watson::WatsonClient,
+};
 use anyhow::Result;
 use clap::Parser;
 use enum_dispatch::enum_dispatch;
 
 pub mod discovery;
 pub mod worktime;
-pub use worktime::{WorktimeTodayCommand, WorktimeWeeklyCommand};
 
 #[enum_dispatch]
 pub trait Command {

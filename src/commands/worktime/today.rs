@@ -1,6 +1,5 @@
-use super::Command;
-use crate::utils::date::Week;
-use crate::utils::formatting::{self, DurationFormat, WeekFormat};
+use super::super::Command;
+use crate::utils::formatting::{self, DurationFormat};
 use crate::utils::spinner::{SpinnerConfig, SpinnerGuard};
 use crate::watson::{LogQuery, WatsonClient};
 use anyhow::Result;
@@ -67,63 +66,6 @@ impl Command for WorktimeTodayCommand {
         };
 
         println!("Worktime today: {} ({})", colored_duration, long_duration);
-        Ok(())
-    }
-}
-
-#[derive(Parser)]
-pub struct WorktimeWeeklyCommand {
-    /// Number of weeks to show (default: 4)
-    #[arg(long, default_value = "4")]
-    weeks: u32,
-}
-
-impl Command for WorktimeWeeklyCommand {
-    fn run(&self, watson_client: &WatsonClient, verbose: bool) -> Result<()> {
-        if verbose {
-            println!(
-                "{}",
-                formatting::verbose_text("Running worktime:weekly command in verbose mode")
-            );
-        }
-
-        // Get the last N weeks
-        let weeks = Week::last_n_weeks(self.weeks);
-
-        let week_frames = {
-            let spinner = SpinnerGuard::new(SpinnerConfig::default());
-            let mut week_frames = vec![];
-
-            for week in &weeks {
-                let query = LogQuery::week(week);
-                let frames = watson_client.log(query)?;
-                week_frames.push((week, frames));
-            }
-            week_frames
-        };
-
-        for (week, frames) in &week_frames {
-            let total_duration = frames.total_duration();
-            let hours = total_duration.num_hours();
-            let short_duration = total_duration.to_string_hhmm();
-            let long_duration = total_duration.to_string_long_hhmm();
-
-            // Color based on hours worked
-            let colored_duration = match hours {
-                0 => short_duration.fg::<NoWorkColor>().to_string(),
-                1..=3 => short_duration.fg::<LowWorkColor>().to_string(), // <4h
-                4..=7 => short_duration.fg::<MediumWorkColor>().to_string(), // <8h
-                _ => short_duration.fg::<HighWorkColor>().to_string(),    // >=8h
-            };
-
-            println!(
-                "{}: {} ({})",
-                week.to_string_long(),
-                colored_duration,
-                long_duration
-            );
-        }
-
         Ok(())
     }
 }
