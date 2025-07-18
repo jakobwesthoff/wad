@@ -5,7 +5,7 @@ mod commands;
 mod utils;
 mod watson;
 
-use commands::{Command, Commands};
+use commands::{Command, Commands, discovery};
 use utils::formatting;
 use watson::WatsonClient;
 
@@ -59,18 +59,6 @@ fn main() -> Result<()> {
 
     match cli.command {
         Some(command) => command.run(&watson_client, cli.verbose),
-        None => {
-            println!(
-                "{}",
-                formatting::header_text(
-                    "Watson Dashboard - Enhanced querying and overview for Watson time tracker"
-                )
-            );
-            println!(
-                "{}",
-                formatting::info_text("Use --help for more information")
-            );
-            Ok(())
-        }
+        None => discovery::show_command_selection_menu(&watson_client, cli.verbose),
     }
 }

@@ -18,6 +18,12 @@ pub struct WorktimeTodayCommand {
     projects: bool,
 }
 
+impl WorktimeTodayCommand {
+    pub fn new() -> Self {
+        Self { projects: false }
+    }
+}
+
 impl Command for WorktimeTodayCommand {
     fn run(&self, watson_client: &WatsonClient, verbose: bool) -> Result<()> {
         if verbose {
