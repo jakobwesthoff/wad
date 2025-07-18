@@ -1,14 +1,13 @@
-use anyhow::{Result, anyhow};
-use clap::CommandFactory;
+use anyhow::Result;
+use clap::{CommandFactory, FromArgMatches};
 use inquire::Select;
 use std::fmt;
 
-use crate::{commands::Command, utils::formatting, watson::WatsonClient};
-
-use super::{Commands, WorktimeTodayCommand};
+use super::{Command as CommandTrait, Commands};
+use crate::{utils::formatting, watson::WatsonClient};
 
 /// Metadata for a command extracted from clap introspection
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CommandMetadata {
     pub name: String,
     pub description: String,
@@ -38,28 +37,6 @@ fn get_all_commands() -> Vec<CommandMetadata> {
     commands
 }
 
-/// Creates a command instance by name with default arguments
-fn create_command_by_name(name: &str) -> Result<Commands> {
-    match name {
-        "worktime:today" => Ok(Commands::WorktimeToday(WorktimeTodayCommand::new())),
-        _ => Err(anyhow!("Unknown command: {}", name)),
-    }
-}
-
-/// Execute the given command by name
-fn execute_command(command_name: &str, watson_client: &WatsonClient, verbose: bool) -> Result<()> {
-    if verbose {
-        println!(
-            "{}",
-            formatting::verbose_text(&format!("Executing command: {}", command_name))
-        );
-    }
-
-    // Create and execute the command dynamically
-    let command = create_command_by_name(command_name)?;
-    command.run(watson_client, verbose)
-}
-
 /// Show a command selection menu for all commands and execute the selected one.
 pub fn show_command_selection_menu(watson_client: &WatsonClient, verbose: bool) -> Result<()> {
     println!(
@@ -78,7 +55,14 @@ pub fn show_command_selection_menu(watson_client: &WatsonClient, verbose: bool) 
         .prompt();
 
     match selection {
-        Ok(command_metadata) => execute_command(&command_metadata.name, watson_client, verbose),
+        Ok(command_metadata) => {
+            // Use clap's parsing to convert command name back to Commands enum variant for execution
+            let program_name = std::env::args().next().unwrap_or_else(|| "wad".to_string());
+            let args = vec![program_name, command_metadata.name.clone()];
+            let matches = Commands::command().try_get_matches_from(args)?;
+            let command = Commands::from_arg_matches(&matches)?;
+            command.run(watson_client, verbose)
+        }
         Err(_) => {
             println!("{}", formatting::info_text("Selection cancelled"));
             Ok(())
