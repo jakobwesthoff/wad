@@ -1,3 +1,5 @@
+use crate::utils::date::Week;
+use chrono::Datelike;
 use owo_colors::{OwoColorize, colors::*};
 
 // Semantic color type aliases
@@ -63,6 +65,43 @@ impl DurationFormat for chrono::Duration {
                 m,
                 if m == 1 { "" } else { "s" }
             ),
+        }
+    }
+}
+
+/// Trait for formatting weeks in a human-readable way
+pub trait WeekFormat {
+    fn to_string_short(&self) -> String;
+    fn to_string_long(&self) -> String;
+}
+
+impl WeekFormat for Week {
+    fn to_string_short(&self) -> String {
+        format!(
+            "{} - {}",
+            self.start.format("%d.%m"),
+            self.end.format("%d.%m")
+        )
+    }
+
+    fn to_string_long(&self) -> String {
+        if self.start.month() == self.end.month() {
+            format!(
+                "{} - {}. {} {}",
+                self.start.day(),
+                self.end.day(),
+                self.start.format("%B"),
+                self.start.year()
+            )
+        } else {
+            format!(
+                "{}. {} - {}. {} {}",
+                self.start.day(),
+                self.start.format("%B"),
+                self.end.day(),
+                self.end.format("%B"),
+                self.start.year()
+            )
         }
     }
 }
