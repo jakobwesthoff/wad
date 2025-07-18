@@ -1,4 +1,5 @@
 use spinners::{Spinner, Spinners};
+use std::io::{self, Write};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -96,10 +97,20 @@ impl SpinnerGuard {
             Some(msg) => SpinnerMessage::StopWithMessage(msg),
             None => SpinnerMessage::Stop,
         });
+
+        // Block until spinner thread fully completes
+        if let Some(handle) = self.thread_handle.take() {
+            let _ = handle.join();
+        }
     }
 
     pub fn finish_with_symbol(mut self, symbol: String, message: Option<String>) {
         self.send_message(SpinnerMessage::StopWithSymbol(symbol, message));
+
+        // Block until spinner thread fully completes
+        if let Some(handle) = self.thread_handle.take() {
+            let _ = handle.join();
+        }
     }
 
     fn send_message(&mut self, message: SpinnerMessage) {
@@ -118,7 +129,13 @@ impl SpinnerGuard {
         if let Some(mut sp) = spinner_lock.take() {
             match message {
                 SpinnerMessage::Stop => {
-                    sp.stop();
+                    sp.stop(); // Stop the spinner thread
+                    // Manually clear the line without newline
+                    // The spinners crate doesn't provide a way to clear the line without
+                    // adding a newline. All stop_* methods use writeln!() which adds \n.
+                    // We want to clear the spinner but stay on the same line for our output.
+                    eprint!("\x1b[2K\r");
+                    io::stderr().flush().unwrap();
                 }
                 SpinnerMessage::StopWithMessage(msg) => {
                     sp.stop_with_message(msg);
@@ -151,10 +168,13 @@ impl SpinnerGuard {
 
 impl Drop for SpinnerGuard {
     fn drop(&mut self) {
-        self.send_message(SpinnerMessage::Stop);
+        // Only send stop message and join if thread hasn't been taken by finish methods
+        if self.thread_handle.is_some() {
+            self.send_message(SpinnerMessage::Stop);
 
-        if let Some(handle) = self.thread_handle.take() {
-            let _ = handle.join();
+            if let Some(handle) = self.thread_handle.take() {
+                let _ = handle.join();
+            }
         }
     }
 }

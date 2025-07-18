@@ -30,7 +30,7 @@ impl Command for WorktimeTodayCommand {
         }
 
         let frames = {
-            let _ = SpinnerGuard::new(SpinnerConfig::default());
+            let _spinner = SpinnerGuard::new(SpinnerConfig::default());
             let query = LogQuery::today().with_current();
             watson_client.log(query)?
         };
@@ -91,7 +91,7 @@ impl Command for WorktimeWeeklyCommand {
         let weeks = Week::last_n_weeks(self.weeks);
 
         let week_frames = {
-            let _ = SpinnerGuard::new(SpinnerConfig::default());
+            let spinner = SpinnerGuard::new(SpinnerConfig::default());
             let mut week_frames = vec![];
 
             for week in &weeks {
