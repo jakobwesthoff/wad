@@ -142,7 +142,7 @@ mod tests {
         (store, temp_dir)
     }
 
-    fn create_test_record(date_str: &str, absence_type: AbsenceType, hours: f32) -> AbsenceRecord {
+    fn create_test_record(date_str: &str, absence_type: AbsenceType, hours: f64) -> AbsenceRecord {
         let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").unwrap();
         AbsenceRecord {
             id: Ulid::new(),

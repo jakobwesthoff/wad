@@ -1,4 +1,5 @@
 use crate::utils::date::Week;
+use crate::wad_data::AbsenceType;
 use chrono::Datelike;
 use owo_colors::{OwoColorize, colors::*};
 
@@ -136,6 +137,34 @@ impl WeekFormat for Week {
                 self.end.format("%B"),
                 self.start.year()
             )
+        }
+    }
+}
+
+// Absence type color aliases
+pub type VacationColor = Green;
+pub type SickColor = Red;
+pub type OvertimeReductionColor = Blue;
+pub type HolidayColor = Magenta;
+pub type OtherAbsenceColor = Yellow;
+
+/// Trait for formatting absence types with colors
+pub trait AbsenceTypeFormat {
+    fn to_string_colored(&self) -> String;
+}
+
+impl AbsenceTypeFormat for AbsenceType {
+    fn to_string_colored(&self) -> String {
+        match self {
+            AbsenceType::Vacation => "Vacation".fg::<VacationColor>().to_string(),
+            AbsenceType::Sick => "Sick".fg::<SickColor>().to_string(),
+            AbsenceType::OvertimeReduction => "Overtime Reduction"
+                .fg::<OvertimeReductionColor>()
+                .to_string(),
+            AbsenceType::Holiday => "Holiday".fg::<HolidayColor>().to_string(),
+            AbsenceType::Other(custom) => format!("Other: {}", custom)
+                .fg::<OtherAbsenceColor>()
+                .to_string(),
         }
     }
 }

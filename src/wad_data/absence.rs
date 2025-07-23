@@ -6,7 +6,7 @@ use ulid::Ulid;
 pub struct AbsenceRecord {
     pub id: Ulid,
     pub date: NaiveDate,
-    pub hours: f32,
+    pub hours: f64,
     pub absence_type: AbsenceType,
     pub note: Option<String>,
 }
@@ -42,7 +42,7 @@ mod tests {
     fn test_absence_record_serialization(
         date_str: &str,
         absence_type: AbsenceType,
-        hours: f32,
+        hours: f64,
         note: Option<String>,
     ) {
         let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").unwrap();

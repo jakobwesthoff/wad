@@ -1,5 +1,6 @@
 use crate::{
     commands::{
+        absence::AbsenceCommand,
         config::ConfigCommand,
         worktime::{WorktimeTodayCommand, WorktimeWeeklyCommand},
     },
@@ -10,6 +11,7 @@ use anyhow::Result;
 use clap::Parser;
 use enum_dispatch::enum_dispatch;
 
+pub mod absence;
 pub mod config;
 pub mod discovery;
 pub mod worktime;
@@ -22,6 +24,9 @@ pub trait Command {
 #[derive(Parser)]
 #[enum_dispatch(Command)]
 pub enum Commands {
+    /// Absence record management
+    #[command(name = "absence")]
+    Absence(AbsenceCommand),
     /// Configuration management
     #[command(name = "config")]
     Config(ConfigCommand),
