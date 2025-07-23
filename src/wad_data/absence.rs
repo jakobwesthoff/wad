@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
+use ulid::Ulid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AbsenceRecord {
+    pub id: Ulid,
     pub date: NaiveDate,
     pub hours: f32,
     pub absence_type: AbsenceType,
@@ -23,14 +23,9 @@ pub enum AbsenceType {
 pub trait AbsenceStorage {
     type Error;
 
-    fn store_absence(&self, record: AbsenceRecord) -> Result<(), Self::Error>;
-    fn get_absences(
-        &self,
-        start: NaiveDate,
-        end: NaiveDate,
-    ) -> Result<HashMap<NaiveDate, AbsenceRecord>, Self::Error>;
-    fn get_absence(&self, date: NaiveDate) -> Result<Option<AbsenceRecord>, Self::Error>;
-    fn delete_absence(&self, date: NaiveDate) -> Result<bool, Self::Error>;
+    fn add_absence(&self, record: AbsenceRecord) -> Result<(), Self::Error>;
+    fn get_absence(&self, date: NaiveDate) -> Result<Vec<AbsenceRecord>, Self::Error>;
+    fn remove_absence(&self, date: NaiveDate, id: Ulid) -> Result<bool, Self::Error>;
 }
 
 #[cfg(test)]
@@ -52,6 +47,7 @@ mod tests {
     ) {
         let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").unwrap();
         let record = AbsenceRecord {
+            id: Ulid::new(),
             date,
             hours,
             absence_type,
@@ -63,6 +59,7 @@ mod tests {
 
         // Test round-trip deserialization
         let deserialized: AbsenceRecord = serde_json::from_str(&json).unwrap();
+        assert_eq!(record.id, deserialized.id);
         assert_eq!(record.date, deserialized.date);
         assert_eq!(record.hours, deserialized.hours);
         assert_eq!(record.note, deserialized.note);
