@@ -184,6 +184,7 @@ impl AbsenceTypeFormat for AbsenceType {
 pub trait TimeBreakdownFormat {
     fn to_string_split(&self) -> String;
     fn to_string_split_colored(&self, config: &crate::config::Config) -> String;
+    fn to_string_combined_with_indicator(&self, config: &crate::config::Config) -> String;
 }
 
 impl TimeBreakdownFormat for DayTimeBreakdown {
@@ -261,5 +262,28 @@ impl TimeBreakdownFormat for DayTimeBreakdown {
         }
 
         result
+    }
+
+    fn to_string_combined_with_indicator(&self, config: &crate::config::Config) -> String {
+        let total = self.total_duration();
+        let formatted_total = total.to_string_hhmm();
+
+        // Color based on total duration (Watson + absences)
+        let colored_total = if total.num_hours() as f64 <= config.daily_worktime_low {
+            formatted_total.fg::<NoWorkColor>().to_string()
+        } else if (total.num_hours() as f64) < config.daily_worktime_medium {
+            formatted_total.fg::<LowWorkColor>().to_string()
+        } else if (total.num_hours() as f64) < config.daily_worktime_good {
+            formatted_total.fg::<MediumWorkColor>().to_string()
+        } else {
+            formatted_total.fg::<HighWorkColor>().to_string()
+        };
+
+        // Add + indicator if there are absences
+        if self.absences.is_empty() {
+            colored_total
+        } else {
+            format!("{}+", colored_total)
+        }
     }
 }

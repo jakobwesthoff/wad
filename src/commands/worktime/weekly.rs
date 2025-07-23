@@ -23,6 +23,7 @@ impl WeeklyTableBuilder {
         week_frames: &[(&Week, Frames)],
         config: &Config,
         store: &JsonDataStore,
+        show_absence_details: bool,
     ) -> Result<Table> {
         let mut b = Builder::new();
         // Headers
@@ -33,7 +34,13 @@ impl WeeklyTableBuilder {
             b.push_record([&week.to_string_long()]);
 
             // Create row for this week
-            b.push_record(Self::create_week_row(week, frames, config, store)?);
+            b.push_record(Self::create_week_row(
+                week,
+                frames,
+                config,
+                store,
+                show_absence_details,
+            )?);
         }
 
         let mut table = b.build();
@@ -57,6 +64,7 @@ impl WeeklyTableBuilder {
         frames: &Frames,
         config: &Config,
         store: &JsonDataStore,
+        show_absence_details: bool,
     ) -> Result<Vec<String>> {
         let frames_by_date = frames.by_date();
         let mut daily_breakdowns = HashMap::new();
@@ -83,14 +91,23 @@ impl WeeklyTableBuilder {
             .map(|breakdown| breakdown.total_duration())
             .fold(Duration::zero(), |acc, d| acc + d);
 
+        // Choose formatting based on show_absence_details flag
+        let format_day = |breakdown: &DayTimeBreakdown| {
+            if show_absence_details {
+                breakdown.to_string_split_colored(config)
+            } else {
+                breakdown.to_string_combined_with_indicator(config)
+            }
+        };
+
         Ok(vec![
-            daily_breakdowns[&Weekday::Mon].to_string_split_colored(config),
-            daily_breakdowns[&Weekday::Tue].to_string_split_colored(config),
-            daily_breakdowns[&Weekday::Wed].to_string_split_colored(config),
-            daily_breakdowns[&Weekday::Thu].to_string_split_colored(config),
-            daily_breakdowns[&Weekday::Fri].to_string_split_colored(config),
-            daily_breakdowns[&Weekday::Sat].to_string_split_colored(config),
-            daily_breakdowns[&Weekday::Sun].to_string_split_colored(config),
+            format_day(&daily_breakdowns[&Weekday::Mon]),
+            format_day(&daily_breakdowns[&Weekday::Tue]),
+            format_day(&daily_breakdowns[&Weekday::Wed]),
+            format_day(&daily_breakdowns[&Weekday::Thu]),
+            format_day(&daily_breakdowns[&Weekday::Fri]),
+            format_day(&daily_breakdowns[&Weekday::Sat]),
+            format_day(&daily_breakdowns[&Weekday::Sun]),
             weekly_total.to_string_weekly_worktime_colored(config),
         ])
     }
@@ -101,6 +118,9 @@ pub struct WorktimeWeeklyCommand {
     /// Number of weeks to show (default: 4)
     #[arg(long, default_value = "4")]
     weeks: u32,
+    /// Show detailed absence breakdown instead of combined totals
+    #[arg(long)]
+    absence: bool,
 }
 
 impl Command for WorktimeWeeklyCommand {
@@ -129,7 +149,7 @@ impl Command for WorktimeWeeklyCommand {
 
         // Open absence store once for the entire operation
         let store = JsonDataStore::open()?;
-        let table = WeeklyTableBuilder::build(&week_frames, config, &store)?;
+        let table = WeeklyTableBuilder::build(&week_frames, config, &store, self.absence)?;
         println!("{}", table);
 
         Ok(())
