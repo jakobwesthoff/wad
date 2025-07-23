@@ -22,7 +22,7 @@ pub struct JsonDataStore {
 }
 
 impl JsonDataStore {
-    fn absences_dir(&self) -> PathBuf {
+    pub fn absences_dir(&self) -> PathBuf {
         self.data_dir.join("absences")
     }
 

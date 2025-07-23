@@ -52,6 +52,8 @@ enum AbsenceAction {
         #[arg(value_parser = parse_ulid)]
         ulid: Ulid,
     },
+    /// Show the path to the absence data directory
+    Path,
 }
 
 fn parse_date(s: &str) -> Result<NaiveDate, String> {
@@ -179,6 +181,13 @@ fn remove_absence(date: NaiveDate, ulid: Ulid) -> Result<()> {
     Ok(())
 }
 
+fn show_absence_path() -> Result<()> {
+    let store = JsonDataStore::open()?;
+    let absences_dir = store.absences_dir();
+    println!("{}", absences_dir.display());
+    Ok(())
+}
+
 impl Command for AbsenceCommand {
     fn run(&self, _watson_client: &WatsonClient, _config: &Config, _verbose: bool) -> Result<()> {
         match &self.action {
@@ -190,6 +199,7 @@ impl Command for AbsenceCommand {
                 note,
             } => add_absence(*date, *hours, absence_type.clone(), note.clone()),
             AbsenceAction::Remove { date, ulid } => remove_absence(*date, *ulid),
+            AbsenceAction::Path => show_absence_path(),
         }
     }
 }
