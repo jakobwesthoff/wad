@@ -48,7 +48,7 @@ impl Command for WorktimeTodayCommand {
         }
 
         let total_duration = frames.total_duration();
-        let colored_duration = total_duration.to_string_worktime_colored(config);
+        let colored_duration = total_duration.to_string_daily_worktime_colored(config);
         let long_duration = total_duration.to_string_long_hhmm();
 
         println!("Worktime today: {} ({})", colored_duration, long_duration);

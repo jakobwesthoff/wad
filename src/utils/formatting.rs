@@ -49,7 +49,8 @@ pub fn verbose_text(text: &str) -> String {
 pub trait DurationFormat {
     fn to_string_hhmm(&self) -> String;
     fn to_string_long_hhmm(&self) -> String;
-    fn to_string_worktime_colored(&self, config: &crate::config::Config) -> String;
+    fn to_string_daily_worktime_colored(&self, config: &crate::config::Config) -> String;
+    fn to_string_weekly_worktime_colored(&self, config: &crate::config::Config) -> String;
 }
 
 impl DurationFormat for chrono::Duration {
@@ -75,7 +76,7 @@ impl DurationFormat for chrono::Duration {
         }
     }
 
-    fn to_string_worktime_colored(&self, config: &crate::config::Config) -> String {
+    fn to_string_daily_worktime_colored(&self, config: &crate::config::Config) -> String {
         let hours = self.num_hours() as f64;
         let formatted = self.to_string_hhmm();
 
@@ -85,6 +86,17 @@ impl DurationFormat for chrono::Duration {
             formatted.fg::<LowWorkColor>().to_string()
         } else if hours < config.daily_worktime_good {
             formatted.fg::<MediumWorkColor>().to_string()
+        } else {
+            formatted.fg::<HighWorkColor>().to_string()
+        }
+    }
+
+    fn to_string_weekly_worktime_colored(&self, config: &crate::config::Config) -> String {
+        let hours = self.num_hours() as f64;
+        let formatted = self.to_string_hhmm();
+
+        if hours < config.workhours_per_week {
+            formatted.fg::<LowWorkColor>().to_string()
         } else {
             formatted.fg::<HighWorkColor>().to_string()
         }

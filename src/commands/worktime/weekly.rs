@@ -65,14 +65,14 @@ impl WeeklyTableBuilder {
         }
 
         vec![
-            daily_durations[&Weekday::Mon].to_string_worktime_colored(config),
-            daily_durations[&Weekday::Tue].to_string_worktime_colored(config),
-            daily_durations[&Weekday::Wed].to_string_worktime_colored(config),
-            daily_durations[&Weekday::Thu].to_string_worktime_colored(config),
-            daily_durations[&Weekday::Fri].to_string_worktime_colored(config),
-            daily_durations[&Weekday::Sat].to_string_worktime_colored(config),
-            daily_durations[&Weekday::Sun].to_string_worktime_colored(config),
-            total_duration.to_string_worktime_colored(config),
+            daily_durations[&Weekday::Mon].to_string_daily_worktime_colored(config),
+            daily_durations[&Weekday::Tue].to_string_daily_worktime_colored(config),
+            daily_durations[&Weekday::Wed].to_string_daily_worktime_colored(config),
+            daily_durations[&Weekday::Thu].to_string_daily_worktime_colored(config),
+            daily_durations[&Weekday::Fri].to_string_daily_worktime_colored(config),
+            daily_durations[&Weekday::Sat].to_string_daily_worktime_colored(config),
+            daily_durations[&Weekday::Sun].to_string_daily_worktime_colored(config),
+            total_duration.to_string_weekly_worktime_colored(config),
         ]
     }
 }
