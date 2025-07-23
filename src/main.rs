@@ -4,6 +4,7 @@ use clap::Parser;
 mod commands;
 mod config;
 mod utils;
+mod wad_data;
 mod watson;
 
 use commands::{Command, Commands, discovery};
