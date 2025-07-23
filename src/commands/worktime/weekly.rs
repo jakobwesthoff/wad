@@ -1,14 +1,16 @@
 use super::super::Command;
 use crate::config::Config;
-use crate::utils::date::Week;
+use crate::utils::date::{DayTimeBreakdown, Week};
 use crate::utils::formatting::WeekFormat;
-use crate::utils::formatting::{self, DurationFormat};
+use crate::utils::formatting::{self, DurationFormat, TimeBreakdownFormat};
 use crate::utils::spinner::{SpinnerConfig, SpinnerGuard};
+use crate::wad_data::{AbsenceStorage, JsonDataStore, WadDataStore};
 use crate::watson::frame::Frames;
 use crate::watson::{LogQuery, WatsonClient};
 use anyhow::Result;
 use chrono::{Datelike, Duration, Weekday};
 use clap::Parser;
+use std::collections::HashMap;
 use tabled::Table;
 use tabled::builder::Builder;
 use tabled::settings::themes::BorderCorrection;
@@ -17,7 +19,11 @@ use tabled::settings::{Alignment, Span, Style};
 pub struct WeeklyTableBuilder;
 
 impl WeeklyTableBuilder {
-    pub fn build(week_frames: &[(&Week, Frames)], config: &Config) -> Table {
+    pub fn build(
+        week_frames: &[(&Week, Frames)],
+        config: &Config,
+        store: &JsonDataStore,
+    ) -> Result<Table> {
         let mut b = Builder::new();
         // Headers
         b.push_record(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Total"]);
@@ -27,7 +33,7 @@ impl WeeklyTableBuilder {
             b.push_record([&week.to_string_long()]);
 
             // Create row for this week
-            b.push_record(Self::create_week_row(week, frames, config));
+            b.push_record(Self::create_week_row(week, frames, config, store)?);
         }
 
         let mut table = b.build();
@@ -43,37 +49,50 @@ impl WeeklyTableBuilder {
         }
         table.with(BorderCorrection::span());
 
-        table
+        Ok(table)
     }
 
-    fn create_week_row(week: &Week, frames: &Frames, config: &Config) -> Vec<String> {
+    fn create_week_row(
+        week: &Week,
+        frames: &Frames,
+        config: &Config,
+        store: &JsonDataStore,
+    ) -> Result<Vec<String>> {
         let frames_by_date = frames.by_date();
-        let mut daily_durations = std::collections::HashMap::new();
-        let total_duration = frames.total_duration();
+        let mut daily_breakdowns = HashMap::new();
 
-        // Calculate duration for each day of the week
+        // Calculate breakdown for each day of the week
         for i in 0..7 {
             let date = week.start + Duration::days(i as i64);
             let weekday = date.weekday();
 
-            let duration = frames_by_date
+            let watson_duration = frames_by_date
                 .get(&date)
                 .map(|day_frames| day_frames.total_duration())
                 .unwrap_or_else(Duration::zero);
 
-            daily_durations.insert(weekday, duration);
+            let absences = store.get_absence(date)?;
+            let breakdown = DayTimeBreakdown::new(watson_duration, absences);
+
+            daily_breakdowns.insert(weekday, breakdown);
         }
 
-        vec![
-            daily_durations[&Weekday::Mon].to_string_daily_worktime_colored(config),
-            daily_durations[&Weekday::Tue].to_string_daily_worktime_colored(config),
-            daily_durations[&Weekday::Wed].to_string_daily_worktime_colored(config),
-            daily_durations[&Weekday::Thu].to_string_daily_worktime_colored(config),
-            daily_durations[&Weekday::Fri].to_string_daily_worktime_colored(config),
-            daily_durations[&Weekday::Sat].to_string_daily_worktime_colored(config),
-            daily_durations[&Weekday::Sun].to_string_daily_worktime_colored(config),
-            total_duration.to_string_weekly_worktime_colored(config),
-        ]
+        // Calculate weekly total by summing all daily breakdowns
+        let weekly_total: Duration = daily_breakdowns
+            .values()
+            .map(|breakdown| breakdown.total_duration())
+            .fold(Duration::zero(), |acc, d| acc + d);
+
+        Ok(vec![
+            daily_breakdowns[&Weekday::Mon].to_string_split_colored(config),
+            daily_breakdowns[&Weekday::Tue].to_string_split_colored(config),
+            daily_breakdowns[&Weekday::Wed].to_string_split_colored(config),
+            daily_breakdowns[&Weekday::Thu].to_string_split_colored(config),
+            daily_breakdowns[&Weekday::Fri].to_string_split_colored(config),
+            daily_breakdowns[&Weekday::Sat].to_string_split_colored(config),
+            daily_breakdowns[&Weekday::Sun].to_string_split_colored(config),
+            weekly_total.to_string_weekly_worktime_colored(config),
+        ])
     }
 }
 
@@ -108,7 +127,9 @@ impl Command for WorktimeWeeklyCommand {
             week_frames
         };
 
-        let table = WeeklyTableBuilder::build(&week_frames, config);
+        // Open absence store once for the entire operation
+        let store = JsonDataStore::open()?;
+        let table = WeeklyTableBuilder::build(&week_frames, config, &store)?;
         println!("{}", table);
 
         Ok(())

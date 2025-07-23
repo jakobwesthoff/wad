@@ -1,6 +1,6 @@
-use crate::utils::date::Week;
+use crate::utils::date::{DayTimeBreakdown, Week};
 use crate::wad_data::AbsenceType;
-use chrono::Datelike;
+use chrono::{Datelike, Duration};
 use owo_colors::{OwoColorize, colors::*};
 
 // Semantic color type aliases
@@ -151,6 +151,7 @@ pub type OtherAbsenceColor = Yellow;
 /// Trait for formatting absence types with colors
 pub trait AbsenceTypeFormat {
     fn to_string_colored(&self) -> String;
+    fn to_emoji(&self) -> &'static str;
 }
 
 impl AbsenceTypeFormat for AbsenceType {
@@ -166,5 +167,99 @@ impl AbsenceTypeFormat for AbsenceType {
                 .fg::<OtherAbsenceColor>()
                 .to_string(),
         }
+    }
+
+    fn to_emoji(&self) -> &'static str {
+        match self {
+            AbsenceType::Vacation => "🏖️",
+            AbsenceType::Sick => "🏥",
+            AbsenceType::OvertimeReduction => "⚖️",
+            AbsenceType::Holiday => "🎉",
+            AbsenceType::Other(_) => "📝",
+        }
+    }
+}
+
+/// Trait for formatting time breakdowns with split display
+pub trait TimeBreakdownFormat {
+    fn to_string_split(&self) -> String;
+    fn to_string_split_colored(&self, config: &crate::config::Config) -> String;
+}
+
+impl TimeBreakdownFormat for DayTimeBreakdown {
+    fn to_string_split(&self) -> String {
+        let mut result = self.watson_duration.to_string_hhmm();
+
+        for absence in &self.absences {
+            let absence_duration = Duration::hours(absence.hours as i64)
+                + Duration::minutes(((absence.hours % 1.0) * 60.0) as i64);
+            result.push_str(&format!(
+                "+{}{}",
+                absence_duration.to_string_hhmm(),
+                absence.absence_type.to_emoji()
+            ));
+        }
+
+        result
+    }
+
+    fn to_string_split_colored(&self, config: &crate::config::Config) -> String {
+        let total = self.total_duration();
+        let base_watson = self.watson_duration.to_string_hhmm();
+
+        // Color the base duration based on total time
+        let colored_watson = if total.num_hours() as f64 <= config.daily_worktime_low {
+            base_watson.fg::<NoWorkColor>().to_string()
+        } else if (total.num_hours() as f64) < config.daily_worktime_medium {
+            base_watson.fg::<LowWorkColor>().to_string()
+        } else if (total.num_hours() as f64) < config.daily_worktime_good {
+            base_watson.fg::<MediumWorkColor>().to_string()
+        } else {
+            base_watson.fg::<HighWorkColor>().to_string()
+        };
+
+        let mut result = colored_watson;
+
+        for absence in &self.absences {
+            let absence_duration = Duration::hours(absence.hours as i64)
+                + Duration::minutes(((absence.hours % 1.0) * 60.0) as i64);
+
+            // Color the absence duration with dimmed type color
+            let colored_absence_time = match absence.absence_type {
+                AbsenceType::Vacation => absence_duration
+                    .to_string_hhmm()
+                    .fg::<VacationColor>()
+                    .dimmed()
+                    .to_string(),
+                AbsenceType::Sick => absence_duration
+                    .to_string_hhmm()
+                    .fg::<SickColor>()
+                    .dimmed()
+                    .to_string(),
+                AbsenceType::OvertimeReduction => absence_duration
+                    .to_string_hhmm()
+                    .fg::<OvertimeReductionColor>()
+                    .dimmed()
+                    .to_string(),
+                AbsenceType::Holiday => absence_duration
+                    .to_string_hhmm()
+                    .fg::<HolidayColor>()
+                    .dimmed()
+                    .to_string(),
+                AbsenceType::Other(_) => absence_duration
+                    .to_string_hhmm()
+                    .fg::<OtherAbsenceColor>()
+                    .dimmed()
+                    .to_string(),
+            };
+
+            result.push_str(&format!(
+                "+{}{}",
+                colored_absence_time,
+                absence.absence_type.to_emoji()
+            ));
+        }
+
+        result
     }
 }

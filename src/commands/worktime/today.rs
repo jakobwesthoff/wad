@@ -1,9 +1,12 @@
 use super::super::Command;
 use crate::config::Config;
-use crate::utils::formatting::{self, DurationFormat};
+use crate::utils::date::DayTimeBreakdown;
+use crate::utils::formatting::{self, DurationFormat, TimeBreakdownFormat};
 use crate::utils::spinner::{SpinnerConfig, SpinnerGuard};
+use crate::wad_data::{AbsenceStorage, JsonDataStore, WadDataStore};
 use crate::watson::{LogQuery, WatsonClient};
 use anyhow::Result;
+use chrono::Local;
 use clap::Parser;
 use owo_colors::{OwoColorize, colors::*};
 
@@ -47,11 +50,23 @@ impl Command for WorktimeTodayCommand {
             println!(); // Empty line before total
         }
 
-        let total_duration = frames.total_duration();
-        let colored_duration = total_duration.to_string_daily_worktime_colored(config);
+        // Load today's absences
+        let today = Local::now().date_naive();
+        let absences = {
+            let store = JsonDataStore::open()?;
+            store.get_absence(today)?
+        };
+
+        // Create day breakdown
+        let watson_duration = frames.total_duration();
+        let day_breakdown = DayTimeBreakdown::new(watson_duration, absences);
+
+        // Display split format
+        let split_display = day_breakdown.to_string_split_colored(config);
+        let total_duration = day_breakdown.total_duration();
         let long_duration = total_duration.to_string_long_hhmm();
 
-        println!("Worktime today: {} ({})", colored_duration, long_duration);
+        println!("Worktime today: {} ({})", split_display, long_duration);
         Ok(())
     }
 }
