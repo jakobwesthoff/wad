@@ -101,7 +101,7 @@ impl Command for WorktimeWeeklyCommand {
             let mut week_frames = vec![];
 
             for week in &weeks {
-                let query = LogQuery::week(week);
+                let query = LogQuery::week(week).with_current();
                 let frames = watson_client.log(query)?;
                 week_frames.push((week, frames));
             }
