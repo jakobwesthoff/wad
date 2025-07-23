@@ -1,4 +1,5 @@
 use super::super::Command;
+use crate::config::Config;
 use crate::utils::date::Week;
 use crate::utils::formatting::WeekFormat;
 use crate::utils::formatting::{self, DurationFormat};
@@ -8,22 +9,15 @@ use crate::watson::{LogQuery, WatsonClient};
 use anyhow::Result;
 use chrono::{Datelike, Duration, Weekday};
 use clap::Parser;
-use owo_colors::{OwoColorize, colors::*};
 use tabled::Table;
 use tabled::builder::Builder;
 use tabled::settings::themes::BorderCorrection;
 use tabled::settings::{Alignment, Span, Style};
 
-// Worktime-specific color aliases
-type NoWorkColor = Red;
-type LowWorkColor = Yellow;
-type MediumWorkColor = Cyan;
-type HighWorkColor = Green;
-
 pub struct WeeklyTableBuilder;
 
 impl WeeklyTableBuilder {
-    pub fn build(week_frames: &[(&Week, Frames)]) -> Table {
+    pub fn build(week_frames: &[(&Week, Frames)], config: &Config) -> Table {
         let mut b = Builder::new();
         // Headers
         b.push_record(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Total"]);
@@ -33,7 +27,7 @@ impl WeeklyTableBuilder {
             b.push_record([&week.to_string_long()]);
 
             // Create row for this week
-            b.push_record(Self::create_week_row(week, frames));
+            b.push_record(Self::create_week_row(week, frames, config));
         }
 
         let mut table = b.build();
@@ -52,7 +46,7 @@ impl WeeklyTableBuilder {
         table
     }
 
-    fn create_week_row(week: &Week, frames: &Frames) -> Vec<String> {
+    fn create_week_row(week: &Week, frames: &Frames, config: &Config) -> Vec<String> {
         let frames_by_date = frames.by_date();
         let mut daily_durations = std::collections::HashMap::new();
         let total_duration = frames.total_duration();
@@ -71,38 +65,15 @@ impl WeeklyTableBuilder {
         }
 
         vec![
-            Self::format_duration_with_color(daily_durations[&Weekday::Mon], true),
-            Self::format_duration_with_color(daily_durations[&Weekday::Tue], true),
-            Self::format_duration_with_color(daily_durations[&Weekday::Wed], true),
-            Self::format_duration_with_color(daily_durations[&Weekday::Thu], true),
-            Self::format_duration_with_color(daily_durations[&Weekday::Fri], true),
-            Self::format_duration_with_color(daily_durations[&Weekday::Sat], true),
-            Self::format_duration_with_color(daily_durations[&Weekday::Sun], true),
-            Self::format_duration_with_color(total_duration, false),
+            daily_durations[&Weekday::Mon].to_string_worktime_colored(config),
+            daily_durations[&Weekday::Tue].to_string_worktime_colored(config),
+            daily_durations[&Weekday::Wed].to_string_worktime_colored(config),
+            daily_durations[&Weekday::Thu].to_string_worktime_colored(config),
+            daily_durations[&Weekday::Fri].to_string_worktime_colored(config),
+            daily_durations[&Weekday::Sat].to_string_worktime_colored(config),
+            daily_durations[&Weekday::Sun].to_string_worktime_colored(config),
+            total_duration.to_string_worktime_colored(config),
         ]
-    }
-
-    fn format_duration_with_color(duration: Duration, is_daily: bool) -> String {
-        let hours = duration.num_hours();
-        let formatted = duration.to_string_hhmm();
-
-        if is_daily {
-            // Daily thresholds: 0hrs=Red, 1-4hrs=Yellow, 5-7hrs=Cyan, 8+hrs=Green
-            match hours {
-                0 => formatted.fg::<NoWorkColor>().to_string(),
-                1..=4 => formatted.fg::<LowWorkColor>().to_string(),
-                5..=7 => formatted.fg::<MediumWorkColor>().to_string(),
-                _ => formatted.fg::<HighWorkColor>().to_string(),
-            }
-        } else {
-            // Weekly thresholds: 0hrs=Red, 1-3hrs=Yellow, 4-7hrs=Cyan, 8+hrs=Green
-            match hours {
-                0 => formatted.fg::<NoWorkColor>().to_string(),
-                1..=3 => formatted.fg::<LowWorkColor>().to_string(),
-                4..=7 => formatted.fg::<MediumWorkColor>().to_string(),
-                _ => formatted.fg::<HighWorkColor>().to_string(),
-            }
-        }
     }
 }
 
@@ -114,7 +85,7 @@ pub struct WorktimeWeeklyCommand {
 }
 
 impl Command for WorktimeWeeklyCommand {
-    fn run(&self, watson_client: &WatsonClient, verbose: bool) -> Result<()> {
+    fn run(&self, watson_client: &WatsonClient, config: &Config, verbose: bool) -> Result<()> {
         if verbose {
             println!(
                 "{}",
@@ -137,7 +108,7 @@ impl Command for WorktimeWeeklyCommand {
             week_frames
         };
 
-        let table = WeeklyTableBuilder::build(&week_frames);
+        let table = WeeklyTableBuilder::build(&week_frames, config);
         println!("{}", table);
 
         Ok(())

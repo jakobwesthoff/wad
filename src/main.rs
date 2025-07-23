@@ -2,10 +2,12 @@ use anyhow::Result;
 use clap::Parser;
 
 mod commands;
+mod config;
 mod utils;
 mod watson;
 
 use commands::{Command, Commands, discovery};
+use config::Config;
 use utils::formatting;
 use watson::WatsonClient;
 
@@ -40,6 +42,14 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
+    // Open configuration
+    let config = Config::open().unwrap_or_else(|e| {
+        if cli.verbose {
+            eprintln!("{}: {}", formatting::warning_text("Config warning"), e);
+        }
+        Config::default()
+    });
+
     // Print Watson info if verbose
     if cli.verbose {
         if let Ok(version) = watson_client.get_version() {
@@ -58,7 +68,7 @@ fn main() -> Result<()> {
     }
 
     match cli.command {
-        Some(command) => command.run(&watson_client, cli.verbose),
-        None => discovery::show_command_selection_menu(&watson_client, cli.verbose),
+        Some(command) => command.run(&watson_client, &config, cli.verbose),
+        None => discovery::show_command_selection_menu(&watson_client, &config, cli.verbose),
     }
 }

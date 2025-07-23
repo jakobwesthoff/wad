@@ -4,7 +4,7 @@ use inquire::Select;
 use std::fmt;
 
 use super::{Command as CommandTrait, Commands};
-use crate::{utils::formatting, watson::WatsonClient};
+use crate::{config::Config, utils::formatting, watson::WatsonClient};
 
 /// Metadata for a command extracted from clap introspection
 #[derive(Clone)]
@@ -38,7 +38,11 @@ fn get_all_commands() -> Vec<CommandMetadata> {
 }
 
 /// Show a command selection menu for all commands and execute the selected one.
-pub fn show_command_selection_menu(watson_client: &WatsonClient, verbose: bool) -> Result<()> {
+pub fn show_command_selection_menu(
+    watson_client: &WatsonClient,
+    config: &Config,
+    verbose: bool,
+) -> Result<()> {
     println!(
         "{}",
         formatting::header_text(
@@ -61,7 +65,7 @@ pub fn show_command_selection_menu(watson_client: &WatsonClient, verbose: bool) 
             let args = vec![program_name, command_metadata.name.clone()];
             let matches = Commands::command().try_get_matches_from(args)?;
             let command = Commands::from_arg_matches(&matches)?;
-            command.run(watson_client, verbose)
+            command.run(watson_client, config, verbose)
         }
         Err(_) => {
             println!("{}", formatting::info_text("Selection cancelled"));
