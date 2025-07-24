@@ -15,6 +15,8 @@ pub enum JsonDataStoreError {
     Io(#[from] std::io::Error),
     #[error("JSON serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
+    #[error("Absence record with ID {id} not found on {date}")]
+    RecordNotFound { id: Ulid, date: NaiveDate },
 }
 
 pub struct JsonDataStore {
@@ -122,6 +124,55 @@ impl AbsenceStorage for JsonDataStore {
             self.save_absence_file(date, &records)?;
             Ok(original_len != records.len())
         }
+    }
+
+    fn update_absence(
+        &self,
+        date: NaiveDate,
+        updated_record: AbsenceRecord,
+    ) -> Result<(), Self::Error> {
+        let original_date = date;
+        let new_date = updated_record.date;
+        let record_id = updated_record.id;
+
+        if original_date == new_date {
+            // Simple case: same date, update in place
+            let mut records = self.load_absence_file(original_date)?;
+
+            let mut found = false;
+            for record in &mut records {
+                if record.id == record_id {
+                    *record = updated_record;
+                    found = true;
+                    break;
+                }
+            }
+
+            if !found {
+                return Err(JsonDataStoreError::RecordNotFound {
+                    id: record_id,
+                    date: original_date,
+                });
+            }
+
+            records.sort_by_key(|r| r.id);
+            self.save_absence_file(original_date, &records)?;
+        } else {
+            // Complex case: date changed, move between files
+            // 1. Remove from original date
+            let removed = self.remove_absence(original_date, record_id)?;
+            if !removed {
+                return Err(JsonDataStoreError::RecordNotFound {
+                    id: record_id,
+                    date: original_date,
+                });
+            }
+
+            // 2. Add to new date
+            self.add_absence(updated_record)?;
+        }
+
+        Ok(())
     }
 }
 

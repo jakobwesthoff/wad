@@ -2,7 +2,9 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+use crate::editor::EditableDocument;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AbsenceRecord {
     pub id: Ulid,
     pub date: NaiveDate,
@@ -11,7 +13,7 @@ pub struct AbsenceRecord {
     pub note: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AbsenceType {
     Vacation,
     Sick,
@@ -26,6 +28,27 @@ pub trait AbsenceStorage {
     fn add_absence(&self, record: AbsenceRecord) -> Result<(), Self::Error>;
     fn get_absence(&self, date: NaiveDate) -> Result<Vec<AbsenceRecord>, Self::Error>;
     fn remove_absence(&self, date: NaiveDate, id: Ulid) -> Result<bool, Self::Error>;
+    fn update_absence(
+        &self,
+        date: NaiveDate,
+        updated_record: AbsenceRecord,
+    ) -> Result<(), Self::Error>;
+}
+
+impl EditableDocument for AbsenceRecord {
+    fn validate(&self, original: &Self) -> Result<(), String> {
+        // ULID must not be changed (immutable identity)
+        if self.id != original.id {
+            return Err("ULID cannot be changed".to_string());
+        }
+
+        // Hours must be non-negative
+        if self.hours < 0.0 {
+            return Err("Hours cannot be negative".to_string());
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 use super::Command;
 use crate::config::Config;
+use crate::editor::EditorSession;
 use crate::utils::formatting::{self, AbsenceTypeFormat};
 use crate::wad_data::{AbsenceRecord, AbsenceStorage, AbsenceType, JsonDataStore, WadDataStore};
 use crate::watson::WatsonClient;
@@ -49,7 +50,16 @@ enum AbsenceAction {
         #[arg(value_parser = parse_date)]
         date: NaiveDate,
         /// ULID of the specific absence record to remove
-        #[arg(value_parser = parse_ulid)]
+        #[arg(name = "id", value_parser = parse_ulid)]
+        ulid: Ulid,
+    },
+    /// Edit a specific absence record
+    Edit {
+        /// Date of the absence (YYYY-MM-DD, 'today', 'yesterday', 'tomorrow')
+        #[arg(value_parser = parse_date)]
+        date: NaiveDate,
+        /// ULID of the specific absence record to edit
+        #[arg(name = "id", value_parser = parse_ulid)]
         ulid: Ulid,
     },
     /// Show the path to the absence data directory
@@ -140,15 +150,10 @@ fn add_absence(
     println!(
         "{} {} | {} | {} on {}",
         formatting::success_text("Added absence:"),
-        record.id.to_string().fg::<AbsenceIdColor>().to_string(),
-        format!("{} hours", record.hours)
-            .fg::<AbsenceHoursColor>()
-            .to_string(),
+        record.id.to_string().fg::<AbsenceIdColor>(),
+        format!("{} hours", record.hours).fg::<AbsenceHoursColor>(),
         record.absence_type.to_string_colored(),
-        date.format("%Y-%m-%d")
-            .to_string()
-            .fg::<AbsenceDateColor>()
-            .to_string()
+        date.format("%Y-%m-%d").to_string().fg::<AbsenceDateColor>()
     );
     Ok(())
 }
@@ -161,23 +166,68 @@ fn remove_absence(date: NaiveDate, ulid: Ulid) -> Result<()> {
         println!(
             "{} {} from {}",
             formatting::success_text("Removed absence"),
-            ulid.to_string().fg::<AbsenceIdColor>().to_string(),
-            date.format("%Y-%m-%d")
-                .to_string()
-                .fg::<AbsenceDateColor>()
-                .to_string()
+            ulid.to_string().fg::<AbsenceIdColor>(),
+            date.format("%Y-%m-%d").to_string().fg::<AbsenceDateColor>()
         );
     } else {
         println!(
             "{} {} on {}",
             formatting::warning_text("No absence found with ULID"),
-            ulid.to_string().fg::<AbsenceIdColor>().to_string(),
-            date.format("%Y-%m-%d")
-                .to_string()
-                .fg::<AbsenceDateColor>()
-                .to_string()
+            ulid.to_string().fg::<AbsenceIdColor>(),
+            date.format("%Y-%m-%d").to_string().fg::<AbsenceDateColor>()
         );
     }
+    Ok(())
+}
+
+fn edit_absence(date: NaiveDate, ulid: Ulid) -> Result<()> {
+    let store = JsonDataStore::open()?;
+
+    // Get all absences for the date to find the one to edit
+    let absences = store.get_absence(date)?;
+    let original_record = absences
+        .iter()
+        .find(|record| record.id == ulid)
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "No absence found with ULID {} on {}",
+                ulid.to_string().fg::<AbsenceIdColor>(),
+                date.format("%Y-%m-%d").to_string().fg::<AbsenceDateColor>()
+            )
+        })?
+        .clone();
+
+    // Create editor session and edit the record
+    let editor_session = EditorSession::new(original_record.clone());
+    let edited_record = match editor_session.edit() {
+        Ok(record) => record,
+        Err(crate::editor::EditorError::NoChanges) => {
+            println!(
+                "{} No changes made to absence {}",
+                formatting::info_text("Info:"),
+                ulid.to_string().fg::<AbsenceIdColor>()
+            );
+            return Ok(());
+        }
+        Err(e) => return Err(e.into()),
+    };
+
+    // Update the record in storage
+    store.update_absence(date, edited_record.clone())?;
+
+    println!(
+        "{} {} | {} | {} on {}",
+        formatting::success_text("Updated absence:"),
+        edited_record.id.to_string().fg::<AbsenceIdColor>(),
+        format!("{} hours", edited_record.hours).fg::<AbsenceHoursColor>(),
+        edited_record.absence_type.to_string_colored(),
+        edited_record
+            .date
+            .format("%Y-%m-%d")
+            .to_string()
+            .fg::<AbsenceDateColor>()
+    );
+
     Ok(())
 }
 
@@ -199,6 +249,7 @@ impl Command for AbsenceCommand {
                 note,
             } => add_absence(*date, *hours, absence_type.clone(), note.clone()),
             AbsenceAction::Remove { date, ulid } => remove_absence(*date, *ulid),
+            AbsenceAction::Edit { date, ulid } => edit_absence(*date, *ulid),
             AbsenceAction::Path => show_absence_path(),
         }
     }
