@@ -1,5 +1,5 @@
 use crate::wad_data::AbsenceRecord;
-use chrono::{Datelike, Duration, Local, NaiveDate, Weekday};
+use chrono::{Datelike, Duration, Local, NaiveDate};
 
 /// Represents a week with Monday as the first day and Sunday as the last day
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,19 +44,6 @@ impl Week {
             .rev() // Reverse to get oldest to newest
             .collect()
     }
-
-    /// Get ordered weekdays for table display (Mon-Sun)
-    pub fn weekday_order() -> [Weekday; 7] {
-        [
-            Weekday::Mon,
-            Weekday::Tue,
-            Weekday::Wed,
-            Weekday::Thu,
-            Weekday::Fri,
-            Weekday::Sat,
-            Weekday::Sun,
-        ]
-    }
 }
 
 /// Data structure representing a day's time breakdown: work + absences
@@ -71,13 +58,6 @@ impl DayTimeBreakdown {
         Self {
             watson_duration,
             absences,
-        }
-    }
-
-    pub fn watson_only(watson_duration: Duration) -> Self {
-        Self {
-            watson_duration,
-            absences: Vec::new(),
         }
     }
 

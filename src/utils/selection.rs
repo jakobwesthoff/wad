@@ -16,10 +16,6 @@ impl<T> SelectionOption<T> {
             value,
         }
     }
-
-    pub fn value(self) -> T {
-        self.value
-    }
 }
 
 impl<T> Display for SelectionOption<T> {

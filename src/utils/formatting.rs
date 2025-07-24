@@ -56,7 +56,6 @@ pub fn verbose_text(text: &str) -> String {
 pub trait DurationFormat {
     fn to_string_hhmm(&self) -> String;
     fn to_string_long_hhmm(&self) -> String;
-    fn to_string_daily_worktime_colored(&self, config: &crate::config::Config) -> String;
     fn to_string_weekly_worktime_colored(&self, config: &crate::config::Config) -> String;
 }
 
@@ -83,21 +82,6 @@ impl DurationFormat for chrono::Duration {
         }
     }
 
-    fn to_string_daily_worktime_colored(&self, config: &crate::config::Config) -> String {
-        let hours = self.num_hours() as f64;
-        let formatted = self.to_string_hhmm();
-
-        if hours <= config.daily_worktime_low {
-            formatted.fg::<NoWorkColor>().to_string()
-        } else if hours < config.daily_worktime_medium {
-            formatted.fg::<LowWorkColor>().to_string()
-        } else if hours < config.daily_worktime_good {
-            formatted.fg::<MediumWorkColor>().to_string()
-        } else {
-            formatted.fg::<HighWorkColor>().to_string()
-        }
-    }
-
     fn to_string_weekly_worktime_colored(&self, config: &crate::config::Config) -> String {
         let hours = self.num_hours() as f64;
         let formatted = self.to_string_hhmm();
@@ -112,19 +96,10 @@ impl DurationFormat for chrono::Duration {
 
 /// Trait for formatting weeks in a human-readable way
 pub trait WeekFormat {
-    fn to_string_short(&self) -> String;
     fn to_string_long(&self) -> String;
 }
 
 impl WeekFormat for Week {
-    fn to_string_short(&self) -> String {
-        format!(
-            "{} - {}",
-            self.start.format("%d.%m"),
-            self.end.format("%d.%m")
-        )
-    }
-
     fn to_string_long(&self) -> String {
         if self.start.month() == self.end.month() {
             format!(
@@ -188,28 +163,11 @@ impl AbsenceTypeFormat for AbsenceType {
 
 /// Trait for formatting time breakdowns with split display
 pub trait TimeBreakdownFormat {
-    fn to_string_split(&self) -> String;
     fn to_string_split_colored(&self, config: &crate::config::Config) -> String;
     fn to_string_combined_with_indicator(&self, config: &crate::config::Config) -> String;
 }
 
 impl TimeBreakdownFormat for DayTimeBreakdown {
-    fn to_string_split(&self) -> String {
-        let mut result = self.watson_duration.to_string_hhmm();
-
-        for absence in &self.absences {
-            let absence_duration = Duration::hours(absence.hours as i64)
-                + Duration::minutes(((absence.hours % 1.0) * 60.0) as i64);
-            result.push_str(&format!(
-                "+{}{}",
-                absence_duration.to_string_hhmm(),
-                absence.absence_type.to_emoji()
-            ));
-        }
-
-        result
-    }
-
     fn to_string_split_colored(&self, config: &crate::config::Config) -> String {
         let total = self.total_duration();
         let base_watson = self.watson_duration.to_string_hhmm();
