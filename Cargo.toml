@@ -8,6 +8,7 @@ anyhow = "1.0.98"
 chrono = { version = "0.4.41", features = ["serde"] }
 clap = { version = "4.5.41", features = ["derive"] }
 config = "0.15.13"
+derive_more = { version = "2.0.1", features = ["deref", "from"] }
 dirs = "6.0.0"
 edit = "0.1.5"
 enum_dispatch = "0.3.13"

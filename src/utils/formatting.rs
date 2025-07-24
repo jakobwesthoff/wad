@@ -1,4 +1,4 @@
-use crate::utils::date::{DayTimeBreakdown, Week};
+use crate::utils::date::{DailyWorktime, DayTimeBreakdown, Week, WeeklyWorktime};
 use crate::wad_data::{AbsenceRecord, AbsenceType};
 use chrono::{Datelike, Duration};
 use owo_colors::{OwoColorize, colors::*};
@@ -56,7 +56,6 @@ pub fn verbose_text(text: &str) -> String {
 pub trait DurationFormat {
     fn to_string_hhmm(&self) -> String;
     fn to_string_long_hhmm(&self) -> String;
-    fn to_string_weekly_worktime_colored(&self, config: &crate::config::Config) -> String;
 }
 
 impl DurationFormat for chrono::Duration {
@@ -79,17 +78,6 @@ impl DurationFormat for chrono::Duration {
                 m,
                 if m == 1 { "" } else { "s" }
             ),
-        }
-    }
-
-    fn to_string_weekly_worktime_colored(&self, config: &crate::config::Config) -> String {
-        let hours = self.num_hours() as f64;
-        let formatted = self.to_string_hhmm();
-
-        if hours < config.workhours_per_week {
-            formatted.fg::<LowWorkColor>().to_string()
-        } else {
-            formatted.fg::<HighWorkColor>().to_string()
         }
     }
 }
@@ -161,6 +149,38 @@ impl AbsenceTypeFormat for AbsenceType {
     }
 }
 
+/// Format daily worktime with appropriate color coding
+impl DailyWorktime {
+    pub fn to_string_colored(self, config: &crate::config::Config) -> String {
+        let hours = self.num_hours() as f64;
+        let formatted = self.to_string_hhmm();
+
+        if hours <= config.daily_worktime_low {
+            formatted.fg::<NoWorkColor>().to_string()
+        } else if hours < config.daily_worktime_medium {
+            formatted.fg::<LowWorkColor>().to_string()
+        } else if hours < config.daily_worktime_good {
+            formatted.fg::<MediumWorkColor>().to_string()
+        } else {
+            formatted.fg::<HighWorkColor>().to_string()
+        }
+    }
+}
+
+/// Format weekly worktime with appropriate color coding
+impl WeeklyWorktime {
+    pub fn to_string_colored(self, config: &crate::config::Config) -> String {
+        let hours = self.num_hours() as f64;
+        let formatted = self.to_string_hhmm();
+
+        if hours < config.workhours_per_week {
+            formatted.fg::<LowWorkColor>().to_string()
+        } else {
+            formatted.fg::<HighWorkColor>().to_string()
+        }
+    }
+}
+
 /// Trait for formatting time breakdowns with split display
 pub trait TimeBreakdownFormat {
     fn to_string_split_colored(&self, config: &crate::config::Config) -> String;
@@ -169,18 +189,21 @@ pub trait TimeBreakdownFormat {
 
 impl TimeBreakdownFormat for DayTimeBreakdown {
     fn to_string_split_colored(&self, config: &crate::config::Config) -> String {
-        let total = self.total_duration();
+        let total: DailyWorktime = self.total_duration().into();
         let base_watson = self.watson_duration.to_string_hhmm();
 
-        // Color the base duration based on total time
-        let colored_watson = if total.num_hours() as f64 <= config.daily_worktime_low {
-            base_watson.fg::<NoWorkColor>().to_string()
-        } else if (total.num_hours() as f64) < config.daily_worktime_medium {
-            base_watson.fg::<LowWorkColor>().to_string()
-        } else if (total.num_hours() as f64) < config.daily_worktime_good {
-            base_watson.fg::<MediumWorkColor>().to_string()
-        } else {
-            base_watson.fg::<HighWorkColor>().to_string()
+        // Color the base duration based on total time using DailyWorktime wrapper
+        let colored_watson = {
+            let hours = total.num_hours() as f64;
+            if hours <= config.daily_worktime_low {
+                base_watson.fg::<NoWorkColor>().to_string()
+            } else if hours < config.daily_worktime_medium {
+                base_watson.fg::<LowWorkColor>().to_string()
+            } else if hours < config.daily_worktime_good {
+                base_watson.fg::<MediumWorkColor>().to_string()
+            } else {
+                base_watson.fg::<HighWorkColor>().to_string()
+            }
         };
 
         let mut result = colored_watson;
@@ -229,19 +252,8 @@ impl TimeBreakdownFormat for DayTimeBreakdown {
     }
 
     fn to_string_combined_with_indicator(&self, config: &crate::config::Config) -> String {
-        let total = self.total_duration();
-        let formatted_total = total.to_string_hhmm();
-
-        // Color based on total duration (Watson + absences)
-        let colored_total = if total.num_hours() as f64 <= config.daily_worktime_low {
-            formatted_total.fg::<NoWorkColor>().to_string()
-        } else if (total.num_hours() as f64) < config.daily_worktime_medium {
-            formatted_total.fg::<LowWorkColor>().to_string()
-        } else if (total.num_hours() as f64) < config.daily_worktime_good {
-            formatted_total.fg::<MediumWorkColor>().to_string()
-        } else {
-            formatted_total.fg::<HighWorkColor>().to_string()
-        };
+        let total: DailyWorktime = self.total_duration().into();
+        let colored_total = total.to_string_colored(config);
 
         // Add + indicator if there are absences
         if self.absences.is_empty() {

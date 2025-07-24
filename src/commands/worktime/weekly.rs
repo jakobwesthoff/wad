@@ -1,8 +1,8 @@
 use super::super::Command;
 use crate::config::Config;
-use crate::utils::date::{DayTimeBreakdown, Week};
+use crate::utils::date::{DayTimeBreakdown, Week, WeeklyWorktime};
 use crate::utils::formatting::WeekFormat;
-use crate::utils::formatting::{self, DurationFormat, TimeBreakdownFormat};
+use crate::utils::formatting::{self, TimeBreakdownFormat};
 use crate::utils::spinner::{SpinnerConfig, SpinnerGuard};
 use crate::wad_data::{AbsenceStorage, JsonDataStore, WadDataStore};
 use crate::watson::frame::Frames;
@@ -86,10 +86,11 @@ impl WeeklyTableBuilder {
         }
 
         // Calculate weekly total by summing all daily breakdowns
-        let weekly_total: Duration = daily_breakdowns
+        let weekly_total: WeeklyWorktime = daily_breakdowns
             .values()
             .map(|breakdown| breakdown.total_duration())
-            .fold(Duration::zero(), |acc, d| acc + d);
+            .fold(Duration::zero(), |acc, d| acc + d)
+            .into();
 
         // Choose formatting based on show_absence_details flag
         let format_day = |breakdown: &DayTimeBreakdown| {
@@ -108,7 +109,7 @@ impl WeeklyTableBuilder {
             format_day(&daily_breakdowns[&Weekday::Fri]),
             format_day(&daily_breakdowns[&Weekday::Sat]),
             format_day(&daily_breakdowns[&Weekday::Sun]),
-            weekly_total.to_string_weekly_worktime_colored(config),
+            weekly_total.to_string_colored(config),
         ])
     }
 }

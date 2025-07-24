@@ -1,5 +1,14 @@
 use crate::wad_data::AbsenceRecord;
 use chrono::{Datelike, Duration, Local, NaiveDate};
+use derive_more::{Deref, From};
+
+/// Type-safe wrapper for daily worktime durations
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deref, From)]
+pub struct DailyWorktime(pub Duration);
+
+/// Type-safe wrapper for weekly worktime durations
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deref, From)]
+pub struct WeeklyWorktime(pub Duration);
 
 /// Represents a week with Monday as the first day and Sunday as the last day
 #[derive(Debug, Clone, PartialEq, Eq)]
