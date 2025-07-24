@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
-use crate::editor::EditableDocument;
+use crate::utils::editor::EditableDocument;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AbsenceRecord {

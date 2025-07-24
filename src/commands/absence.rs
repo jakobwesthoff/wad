@@ -1,6 +1,6 @@
 use super::Command;
 use crate::config::Config;
-use crate::editor::EditorSession;
+use crate::utils::editor::EditorSession;
 use crate::utils::formatting::{self, AbsenceHoursColor, AbsenceIdColor, AbsenceTypeFormat};
 use crate::utils::selection::SelectionMenu;
 use crate::wad_data::{AbsenceRecord, AbsenceStorage, AbsenceType, JsonDataStore, WadDataStore};
@@ -216,7 +216,7 @@ fn edit_absence(date: NaiveDate, id: Option<Ulid>) -> Result<()> {
     let editor_session = EditorSession::new(original_record.clone());
     let edited_record = match editor_session.edit() {
         Ok(record) => record,
-        Err(crate::editor::EditorError::NoChanges) => {
+        Err(crate::utils::editor::EditorError::NoChanges) => {
             println!(
                 "{} No changes made to absence {}",
                 formatting::info_text("Info:"),

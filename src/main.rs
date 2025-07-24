@@ -3,7 +3,6 @@ use clap::Parser;
 
 mod commands;
 mod config;
-mod editor;
 mod utils;
 mod wad_data;
 mod watson;
