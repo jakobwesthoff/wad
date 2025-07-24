@@ -1,10 +1,13 @@
 use anyhow::Result;
 use clap::{CommandFactory, FromArgMatches};
-use inquire::Select;
 use std::fmt;
 
 use super::{Command as CommandTrait, Commands};
-use crate::{config::Config, utils::formatting, watson::WatsonClient};
+use crate::{
+    config::Config,
+    utils::{formatting, selection::SelectionMenu},
+    watson::WatsonClient,
+};
 
 /// Metadata for a command extracted from clap introspection
 #[derive(Clone)]
@@ -54,9 +57,8 @@ pub fn show_command_selection_menu(
     // Get available commands dynamically from clap
     let command_options = get_all_commands();
 
-    let selection = Select::new("Select a command to run:", command_options)
-        .with_help_message("Use arrow keys to navigate, Enter to select, Esc to cancel")
-        .prompt();
+    let selection =
+        SelectionMenu::from_display_items("Select a command to run:", command_options).prompt();
 
     match selection {
         Ok(command_metadata) => {

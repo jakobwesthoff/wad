@@ -1,7 +1,8 @@
 use crate::utils::date::{DayTimeBreakdown, Week};
-use crate::wad_data::AbsenceType;
+use crate::wad_data::{AbsenceRecord, AbsenceType};
 use chrono::{Datelike, Duration};
 use owo_colors::{OwoColorize, colors::*};
+use std::fmt;
 
 // Semantic color type aliases
 pub type SuccessColor = Green;
@@ -15,6 +16,11 @@ pub type NoWorkColor = Red;
 pub type LowWorkColor = Yellow;
 pub type MediumWorkColor = Cyan;
 pub type HighWorkColor = Green;
+
+// Absence-specific color aliases
+pub type AbsenceIdColor = BrightBlack;
+pub type AbsenceHoursColor = Blue;
+pub type AbsenceNoteColor = BrightBlack;
 
 /// Format success messages
 pub fn success_text(text: &str) -> String {
@@ -285,5 +291,23 @@ impl TimeBreakdownFormat for DayTimeBreakdown {
         } else {
             format!("{}+", colored_total)
         }
+    }
+}
+
+impl fmt::Display for AbsenceRecord {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let ulid_str = self.id.to_string().fg::<AbsenceIdColor>().to_string();
+        let hours = format!("{} hours", self.hours)
+            .fg::<AbsenceHoursColor>()
+            .to_string();
+        let absence_type = self.absence_type.to_string_colored();
+        let note = self
+            .note
+            .as_deref()
+            .unwrap_or("(no note)")
+            .fg::<AbsenceNoteColor>()
+            .to_string();
+
+        write!(f, "{} | {} | {} | {}", ulid_str, hours, absence_type, note)
     }
 }
